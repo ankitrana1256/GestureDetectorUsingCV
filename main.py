@@ -10,7 +10,6 @@ devices = AudioUtilities.GetSpeakers()
 interface = devices.Activate(
     IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
 volume = cast(interface, POINTER(IAudioEndpointVolume))
-print(volume.GetVolumeRange())
 
 cap = cv2.VideoCapture(0)
 cap.set(3, 1200)
@@ -23,12 +22,82 @@ mpDraw = mp.solutions.drawing_utils
 pTime = 0
 cTime = 0
 
+finger_status = {'thumb': False, 'index': False, 'middle': False, 'ring': False, 'pinky': False}
+
+gestures = {'Victory': {'thumb': False, 'index': True, 'middle': True, 'ring': False, 'pinky': False},
+            'ThumbsUp': {'thumb': True, 'index': False, 'middle': False, 'ring': False, 'pinky': False},
+            'Z_alphabet': {'thumb': False, 'index': True, 'middle': False, 'ring': False, 'pinky': False},
+            'Y-alphabet': {'thumb': True, 'index': False, 'middle': False, 'ring': False, 'pinky': True},
+            'Hand': {'thumb': True, 'index': True, 'middle': True, 'ring': True, 'pinky': True}}
+
+
+def find_gesture(val):
+    for key, value in gestures.items():
+        if val == value:
+            cv2.putText(output, f"Gesture: {key}", (400, 70), cv2.FONT_HERSHEY_PLAIN, 3, (255, 0, 255), 3)
+
+
+def update_finger_status(lmlist):
+    if len(lmlist) == 21:
+
+        # position for index finger
+        x1, x2 = position(lmlist, 8), position(lmlist, 5)
+        x3, x4 = position(lmlist, 7), position(lmlist, 6)
+
+        # position for middle finger
+        y1, y2 = position(lmlist, 12), position(lmlist, 9)
+        y3, y4 = position(lmlist, 11), position(lmlist, 10)
+
+        # position for ring finger
+        z1, z2 = position(lmlist, 16), position(lmlist, 13)
+        z3, z4 = position(lmlist, 15), position(lmlist, 14)
+
+        # position for pinky finger
+        p1, p2 = position(lmlist, 20), position(lmlist, 17)
+        p3, p4 = position(lmlist, 19), position(lmlist, 18)
+
+        # position for pinky finger
+        t1, t2 = position(lmlist, 4), position(lmlist, 1)
+        # t3, t4 = position(lmlist, 2), position(lmlist, 1)
+
+        # condition for index finger
+        if x1 and x2 and x1[1] < x2[1] and x3[1] < x4[1]:
+            finger_status['index'] = True
+        else:
+            finger_status['index'] = False
+
+        # condition of middle finger
+        if y1 and y2 and y1[1] < y2[1] and y3[1] < y4[1]:
+            finger_status['middle'] = True
+        else:
+            finger_status['middle'] = False
+
+        # condition for ring finger
+        if z1 and z2 and z1[1] < z2[1] and z3[1] < z4[1]:
+            finger_status['ring'] = True
+        else:
+            finger_status['ring'] = False
+
+        # condition for pinky finger
+        if p1 and p2 and p1[1] < p2[1] and p3[1] < p4[1]:
+            finger_status['pinky'] = True
+        else:
+            finger_status['pinky'] = False
+
+        if t1[1] >= x2[1]:
+            finger_status['thumb'] = False
+        else:
+            finger_status['thumb'] = True
+
+        detect = find_gesture(finger_status)
+
 
 def position(l, point):
-    if len(lmlist) == 20:
+    if len(lmlist) == 21:
         x1, y1 = lmlist[point][1], lmlist[point][2]
         cv2.circle(output, (x1, y1), 10, (255, 0, 255), cv2.FILLED)
         return x1, y1
+
 
 while True:
     success, img = cap.read()
@@ -44,18 +113,9 @@ while True:
                 h, w, c = img.shape
                 cx, cy = int(lm.x * w), int(lm.y * h)
                 lmlist.append([id, cx, cy])
-                x1 = position(lmlist, 4)
-                x2 = position(lmlist, 8)
-                cv2.line(output, x1, x2, (255, 0, 0), 3)
-                if x1 and x2:
-                    lcx = ((x2[0]-x1[0])**2 + (x2[1]-x1[1])**2)**1/2
-                    point1, point2 = (x2[0]+x1[0])//2, (x2[1]+x1[1])//2
-                    cv2.circle(output, (point1, point2), 10, (255, 0, 255), cv2.FILLED)
-                    print("Distance :", lcx)
-                    vol = np.interp(lcx, [12,29000], [-65.25, 0.0])
-                    volume.SetMasterVolumeLevel(vol, None)
-                    if lcx < 400:
-                        cv2.circle(output, (point1, point2), 10, (0, 255, 0), cv2.FILLED)
+
+                # detecting different gestures
+                update_finger_status(lmlist)
 
             mpDraw.draw_landmarks(output, handLms, mpHands.HAND_CONNECTIONS)
 
