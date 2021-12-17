@@ -6,6 +6,10 @@ from ctypes import cast, POINTER
 from comtypes import CLSCTX_ALL
 from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
 
+text_color = (255, 255, 255)
+circle_color = (255, 0, 255)
+
+
 devices = AudioUtilities.GetSpeakers()
 interface = devices.Activate(
     IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
@@ -15,7 +19,8 @@ cap = cv2.VideoCapture(0)
 cap.set(3, 1200)
 cap.set(4, 720)
 mpHands = mp.solutions.hands
-hands = mpHands.Hands(static_image_mode=False, max_num_hands=2, min_detection_confidence=0.8, min_tracking_confidence=0.5)
+hands = mpHands.Hands(static_image_mode=False, max_num_hands=2, min_detection_confidence=0.8,
+                      min_tracking_confidence=0.5)
 
 mpDraw = mp.solutions.drawing_utils
 
@@ -34,69 +39,112 @@ gestures = {'Victory': {'thumb': False, 'index': True, 'middle': True, 'ring': F
 def find_gesture(val):
     for key, value in gestures.items():
         if val == value:
-            cv2.putText(output, f"Gesture: {key}", (400, 70), cv2.FONT_HERSHEY_PLAIN, 3, (255, 0, 255), 3)
+            cv2.putText(output, f"Gesture: {key}", (400, 70), cv2.FONT_HERSHEY_PLAIN, 3, circle_color, 3)
+            highlight_finger(val)
+            return val
 
 
 def update_finger_status(lmlist):
     if len(lmlist) == 21:
 
         # position for index finger
-        x1, x2 = position(lmlist, 8), position(lmlist, 5)
-        x3, x4 = position(lmlist, 7), position(lmlist, 6)
+        IFT, IFM = position(lmlist, 8), position(lmlist, 5)
+        IFD, IFP = position(lmlist, 7), position(lmlist, 6)
 
         # position for middle finger
-        y1, y2 = position(lmlist, 12), position(lmlist, 9)
-        y3, y4 = position(lmlist, 11), position(lmlist, 10)
+        MFT, MFM = position(lmlist, 12), position(lmlist, 9)
+        MFD, MFP = position(lmlist, 11), position(lmlist, 10)
 
         # position for ring finger
-        z1, z2 = position(lmlist, 16), position(lmlist, 13)
-        z3, z4 = position(lmlist, 15), position(lmlist, 14)
+        RFT, RFM = position(lmlist, 16), position(lmlist, 13)
+        RFD, RFP = position(lmlist, 15), position(lmlist, 14)
 
         # position for pinky finger
-        p1, p2 = position(lmlist, 20), position(lmlist, 17)
-        p3, p4 = position(lmlist, 19), position(lmlist, 18)
+        PFT, PFM = position(lmlist, 20), position(lmlist, 17)
+        PFD, PFP = position(lmlist, 19), position(lmlist, 18)
 
-        # position for pinky finger
-        t1, t2 = position(lmlist, 4), position(lmlist, 1)
-        # t3, t4 = position(lmlist, 2), position(lmlist, 1)
+        # position for thumb finger
+        TFT, TFC = position(lmlist, 4), position(lmlist, 1)
+        TFM, TFI = position(lmlist, 2), position(lmlist, 3)
 
         # condition for index finger
-        if x1 and x2 and x1[1] < x2[1] and x3[1] < x4[1]:
+        if IFT and IFM and IFT[1] < IFM[1] and IFD[1] < IFP[1]:
             finger_status['index'] = True
+            cv2.putText(output, "I", (95, 470), cv2.FONT_HERSHEY_PLAIN, 3, text_color, 3)
+            cv2.circle(output, (100, 490), 10, circle_color, cv2.FILLED)
         else:
             finger_status['index'] = False
+            cv2.putText(output, "I", (95, 470), cv2.FONT_HERSHEY_PLAIN, 3, text_color, 3)
+            cv2.circle(output, (100, 490), 10, (0, 0, 255), cv2.FILLED)
 
         # condition of middle finger
-        if y1 and y2 and y1[1] < y2[1] and y3[1] < y4[1]:
+        if MFT and MFM and MFT[1] < MFM[1] and MFD[1] < MFP[1]:
             finger_status['middle'] = True
+            cv2.putText(output, "M", (130, 470), cv2.FONT_HERSHEY_PLAIN, 3, text_color, 3)
+            cv2.circle(output, (150, 490), 10, circle_color, cv2.FILLED)
         else:
             finger_status['middle'] = False
+            cv2.putText(output, "M", (130, 470), cv2.FONT_HERSHEY_PLAIN, 3, text_color, 3)
+            cv2.circle(output, (150, 490), 10, (0, 0, 255), cv2.FILLED)
 
         # condition for ring finger
-        if z1 and z2 and z1[1] < z2[1] and z3[1] < z4[1]:
+        if RFT and RFM and RFT[1] < RFM[1] and RFD[1] < RFP[1]:
             finger_status['ring'] = True
+            cv2.putText(output, "R", (190, 470), cv2.FONT_HERSHEY_PLAIN, 3, text_color, 3)
+            cv2.circle(output, (200, 490), 10, circle_color, cv2.FILLED)
         else:
             finger_status['ring'] = False
+            cv2.putText(output, "R", (190, 470), cv2.FONT_HERSHEY_PLAIN, 3, text_color, 3)
+            cv2.circle(output, (200, 490), 10, (0, 0, 255), cv2.FILLED)
 
         # condition for pinky finger
-        if p1 and p2 and p1[1] < p2[1] and p3[1] < p4[1]:
+        if PFT and PFM and PFT[1] < PFM[1] and PFD[1] < PFP[1]:
             finger_status['pinky'] = True
+            cv2.putText(output, "P", (245, 470), cv2.FONT_HERSHEY_PLAIN, 3, text_color, 3)
+            cv2.circle(output, (250, 490), 10, circle_color, cv2.FILLED)
         else:
             finger_status['pinky'] = False
+            cv2.putText(output, "P", (245, 470), cv2.FONT_HERSHEY_PLAIN, 3, text_color, 3)
+            cv2.circle(output, (250, 490), 10, (0, 0, 255), cv2.FILLED)
 
-        if t1[1] >= x2[1]:
+        # condition for thumb
+        if TFT[1] >= IFM[1]:
             finger_status['thumb'] = False
+            cv2.putText(output, "T", (35, 470), cv2.FONT_HERSHEY_PLAIN, 3, text_color, 3)
+            cv2.circle(output, (50, 490), 10, (0, 0, 255), cv2.FILLED)
         else:
             finger_status['thumb'] = True
+            cv2.putText(output, "T", (35, 470), cv2.FONT_HERSHEY_PLAIN, 3, text_color, 3)
+            cv2.circle(output, (50, 490), 10, circle_color, cv2.FILLED)
 
         detect = find_gesture(finger_status)
 
 
-def position(l, point):
+def position(l, point, mark=False):
     if len(lmlist) == 21:
-        x1, y1 = lmlist[point][1], lmlist[point][2]
-        cv2.circle(output, (x1, y1), 10, (255, 0, 255), cv2.FILLED)
-        return x1, y1
+        x, y = lmlist[point][1], lmlist[point][2]
+        if mark == True:
+            cv2.circle(output, (x, y), 10, circle_color, cv2.FILLED)
+        return x, y
+
+
+def highlight_finger(status):
+    if status['index']:
+        IFT, IFM = position(lmlist, 8, True), position(lmlist, 5, True)
+        IFD, IFP = position(lmlist, 7, True), position(lmlist, 6, True)
+    if status['middle']:
+        MFM, MFT = position(lmlist, 9, True), position(lmlist, 12, True)
+        MFP, MFD = position(lmlist, 10, True), position(lmlist, 11, True)
+    if status['ring']:
+        RFM, RFT = position(lmlist, 13, True), position(lmlist, 16, True)
+        RFP, RFD = position(lmlist, 14, True), position(lmlist, 15, True)
+    if status['pinky']:
+        PFT, PFM = position(lmlist, 20, True), position(lmlist, 17, True)
+        PFD, PFP = position(lmlist, 19, True), position(lmlist, 18, True)
+    if status['thumb']:
+        TFT, TFC = position(lmlist, 4, True), position(lmlist, 1, True)
+        TFM, TFI = position(lmlist, 2, True), position(lmlist, 3, True)
+        WRIST = position(lmlist, 0, True)
 
 
 while True:
@@ -104,11 +152,11 @@ while True:
     output = cv2.flip(img, 1)
     imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     rotatedImg = cv2.flip(imgRGB, 1)
-    result1 = hands.process(rotatedImg)
+    result = hands.process(rotatedImg)
     lmlist = []
 
-    if result1.multi_hand_landmarks:
-        for handLms in result1.multi_hand_landmarks:
+    if result.multi_hand_landmarks:
+        for handLms in result.multi_hand_landmarks:
             for id, lm in enumerate(handLms.landmark):
                 h, w, c = img.shape
                 cx, cy = int(lm.x * w), int(lm.y * h)
@@ -124,8 +172,7 @@ while True:
     pTime = cTime
 
     cv2.putText(output, f"FPS: {int(fps)}", (10, 70), cv2.FONT_HERSHEY_PLAIN, 3, (255, 255, 255), 3)
-
-    cv2.imshow("Assisstant", output)
+    cv2.imshow("Visualiser", output)
 
     if cv2.waitKey(20) == 27:
         break
