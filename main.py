@@ -108,7 +108,7 @@ def update_finger_status(lmlist):
             cv2.circle(output, (250, 490), 10, (0, 0, 255), cv2.FILLED)
 
         # condition for thumb
-        if TFT[1] >= IFM[1]:
+        if TFT[1] >= IFM[1] and TFT[0] > IFM[0]:
             finger_status['thumb'] = False
             cv2.putText(output, "T", (35, 470), cv2.FONT_HERSHEY_PLAIN, 3, text_color, 3)
             cv2.circle(output, (50, 490), 10, (0, 0, 255), cv2.FILLED)
