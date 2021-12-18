@@ -1,3 +1,4 @@
+import math
 import cv2
 import mediapipe as mp
 import time
@@ -10,16 +11,11 @@ text_color = (255, 255, 255)
 circle_color = (255, 0, 255)
 
 
-devices = AudioUtilities.GetSpeakers()
-interface = devices.Activate(
-    IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
-volume = cast(interface, POINTER(IAudioEndpointVolume))
-
 cap = cv2.VideoCapture(0)
 cap.set(3, 1200)
 cap.set(4, 720)
 mpHands = mp.solutions.hands
-hands = mpHands.Hands(static_image_mode=False, max_num_hands=2, min_detection_confidence=0.8,
+hands = mpHands.Hands(static_image_mode=False, max_num_hands=1, min_detection_confidence=0.8,
                       min_tracking_confidence=0.5)
 
 mpDraw = mp.solutions.drawing_utils
@@ -33,15 +29,40 @@ gestures = {'Victory': {'thumb': False, 'index': True, 'middle': True, 'ring': F
             'ThumbsUp': {'thumb': True, 'index': False, 'middle': False, 'ring': False, 'pinky': False},
             'Z_alphabet': {'thumb': False, 'index': True, 'middle': False, 'ring': False, 'pinky': False},
             'Y-alphabet': {'thumb': True, 'index': False, 'middle': False, 'ring': False, 'pinky': True},
-            'Hand': {'thumb': True, 'index': True, 'middle': True, 'ring': True, 'pinky': True}}
+            'Hand': {'thumb': True, 'index': True, 'middle': True, 'ring': True, 'pinky': True},
+            'Volume': {'thumb': True, 'index': True, 'middle': False, 'ring': False, 'pinky': False}}
 
 
-def find_gesture(val):
+def find_gesture(val, lmlist):
     for key, value in gestures.items():
         if val == value:
-            cv2.putText(output, f"Gesture: {key}", (400, 70), cv2.FONT_HERSHEY_PLAIN, 3, circle_color, 3)
             highlight_finger(val)
+            cv2.putText(output, f"Gesture: {key}", (400, 70), cv2.FONT_HERSHEY_PLAIN, 3, circle_color, 3)
+            if key == "Volume":
+                set_volume(lmlist)
             return val
+
+
+def set_volume(lmlist):
+    devices = AudioUtilities.GetSpeakers()
+    interface = devices.Activate(
+        IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+    volume = cast(interface, POINTER(IAudioEndpointVolume))
+    IFT, TFT = position(lmlist, 8), position(lmlist, 4)
+    cv2.line(output, IFT, TFT, (255, 225, 255), 3)
+    distance = math.hypot(TFT[0]-IFT[0], TFT[1]-IFT[1])
+    cx, cy = (TFT[0]+IFT[0])//2, (TFT[1]+IFT[1])//2
+    if distance > 50:
+        cv2.circle(output, (cx, cy), 10, (255, 255, 0), cv2.FILLED)
+    else:
+        cv2.circle(output, (cx, cy), 10, (0, 255, 0), cv2.FILLED)
+    vol = np.interp(distance, [20, 300], [-65, 0])
+    volBar = np.interp(distance, [20, 300], [500, 100])
+    volume.SetMasterVolumeLevel(vol, None)
+    cv2.rectangle(output, (860, 100), (920, 500), (0, 0, 0), 3)
+    cv2.rectangle(output, (860, int(volBar)), (920, 500), (255, 255, 255), cv2.FILLED)
+    p = (500 - int(volBar))/400 * 100
+    cv2.putText(output, f"Volume Set to: {int(p)}%", (10, 140), cv2.FONT_HERSHEY_PLAIN, 3, (0, 0, 0), 3)
 
 
 def update_finger_status(lmlist):
@@ -117,13 +138,14 @@ def update_finger_status(lmlist):
             cv2.putText(output, "T", (35, 470), cv2.FONT_HERSHEY_PLAIN, 3, text_color, 3)
             cv2.circle(output, (50, 490), 10, circle_color, cv2.FILLED)
 
-        detect = find_gesture(finger_status)
+        detect = find_gesture(finger_status, lmlist)
+        return detect
 
 
 def position(l, point, mark=False):
     if len(lmlist) == 21:
         x, y = lmlist[point][1], lmlist[point][2]
-        if mark == True:
+        if mark:
             cv2.circle(output, (x, y), 10, circle_color, cv2.FILLED)
         return x, y
 
@@ -163,7 +185,7 @@ while True:
                 lmlist.append([id, cx, cy])
 
                 # detecting different gestures
-                update_finger_status(lmlist)
+                a = update_finger_status(lmlist)
 
             mpDraw.draw_landmarks(output, handLms, mpHands.HAND_CONNECTIONS)
 
