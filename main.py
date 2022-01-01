@@ -10,7 +10,6 @@ from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
 text_color = (255, 255, 255)
 circle_color = (255, 0, 255)
 
-
 cap = cv2.VideoCapture(0)
 cap.set(3, 1200)
 cap.set(4, 720)
@@ -33,63 +32,37 @@ gestures = {'Victory': {'thumb': False, 'index': True, 'middle': True, 'ring': F
             'Volume': {'thumb': True, 'index': True, 'middle': False, 'ring': False, 'pinky': False}}
 
 
-def find_gesture(val, lmlist):
-    for key, value in gestures.items():
-        if val == value:
-            highlight_finger(val)
-            cv2.putText(output, f"Gesture: {key}", (400, 70), cv2.FONT_HERSHEY_PLAIN, 3, circle_color, 3)
-            if key == "Volume":
-                set_volume(lmlist)
-            return val
+class process_data:
+    def __init__(self, lmlist):
+        self.lmlist = lmlist
 
+        if len(self.lmlist) == 21:
+            # position for index finger
+            self.IFT, self.IFM = position(self.lmlist, 8), position(self.lmlist, 5)
+            self.IFD, self.IFP = position(self.lmlist, 7), position(self.lmlist, 6)
 
-def set_volume(lmlist):
-    devices = AudioUtilities.GetSpeakers()
-    interface = devices.Activate(
-        IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
-    volume = cast(interface, POINTER(IAudioEndpointVolume))
-    IFT, TFT = position(lmlist, 8), position(lmlist, 4)
-    cv2.line(output, IFT, TFT, (255, 225, 255), 3)
-    distance = math.hypot(TFT[0]-IFT[0], TFT[1]-IFT[1])
-    cx, cy = (TFT[0]+IFT[0])//2, (TFT[1]+IFT[1])//2
-    if distance > 50:
-        cv2.circle(output, (cx, cy), 10, (255, 255, 0), cv2.FILLED)
-    else:
-        cv2.circle(output, (cx, cy), 10, (0, 255, 0), cv2.FILLED)
-    vol = np.interp(distance, [20, 300], [-65, 0])
-    volBar = np.interp(distance, [20, 300], [500, 100])
-    volume.SetMasterVolumeLevel(vol, None)
-    cv2.rectangle(output, (860, 100), (920, 500), (0, 0, 0), 3)
-    cv2.rectangle(output, (860, int(volBar)), (920, 500), (255, 255, 255), cv2.FILLED)
-    p = (500 - int(volBar))/400 * 100
-    cv2.putText(output, f"Volume Set to: {int(p)}%", (10, 140), cv2.FONT_HERSHEY_PLAIN, 3, (0, 0, 0), 3)
+            # position for middle finger
+            self.MFT, self.MFM = position(self.lmlist, 12), position(self.lmlist, 9)
+            self.MFD, self.MFP = position(self.lmlist, 11), position(self.lmlist, 10)
 
+            # position for ring finger
+            self.RFT, self.RFM = position(self.lmlist, 16), position(self.lmlist, 13)
+            self.RFD, self.RFP = position(self.lmlist, 15), position(self.lmlist, 14)
 
-def update_finger_status(lmlist):
-    if len(lmlist) == 21:
+            # position for pinky finger
+            self.PFT, self.PFM = position(self.lmlist, 20), position(self.lmlist, 17)
+            self.PFD, self.PFP = position(self.lmlist, 19), position(self.lmlist, 18)
 
-        # position for index finger
-        IFT, IFM = position(lmlist, 8), position(lmlist, 5)
-        IFD, IFP = position(lmlist, 7), position(lmlist, 6)
+            # position for thumb finger
+            self.TFT, self.TFC = position(self.lmlist, 4), position(self.lmlist, 1)
+            self.TFM, self.TFI = position(self.lmlist, 2), position(self.lmlist, 3)
+            self.WRIST = position(self.lmlist,0)
 
-        # position for middle finger
-        MFT, MFM = position(lmlist, 12), position(lmlist, 9)
-        MFD, MFP = position(lmlist, 11), position(lmlist, 10)
+            self.condition()
 
-        # position for ring finger
-        RFT, RFM = position(lmlist, 16), position(lmlist, 13)
-        RFD, RFP = position(lmlist, 15), position(lmlist, 14)
-
-        # position for pinky finger
-        PFT, PFM = position(lmlist, 20), position(lmlist, 17)
-        PFD, PFP = position(lmlist, 19), position(lmlist, 18)
-
-        # position for thumb finger
-        TFT, TFC = position(lmlist, 4), position(lmlist, 1)
-        TFM, TFI = position(lmlist, 2), position(lmlist, 3)
-
+    def condition(self):
         # condition for index finger
-        if IFT and IFM and IFT[1] < IFM[1] and IFD[1] < IFP[1]:
+        if self.IFT and self.IFM and self.IFT[1] < self.IFM[1] and self.IFD[1] < self.IFP[1]:
             finger_status['index'] = True
             cv2.putText(output, "I", (95, 470), cv2.FONT_HERSHEY_PLAIN, 3, text_color, 3)
             cv2.circle(output, (100, 490), 10, circle_color, cv2.FILLED)
@@ -98,8 +71,8 @@ def update_finger_status(lmlist):
             cv2.putText(output, "I", (95, 470), cv2.FONT_HERSHEY_PLAIN, 3, text_color, 3)
             cv2.circle(output, (100, 490), 10, (0, 0, 255), cv2.FILLED)
 
-        # condition of middle finger
-        if MFT and MFM and MFT[1] < MFM[1] and MFD[1] < MFP[1]:
+        # condition for middle finger
+        if self.MFT and self.MFM and self.MFT[1] < self.MFM[1] and self.MFD[1] < self.MFP[1]:
             finger_status['middle'] = True
             cv2.putText(output, "M", (130, 470), cv2.FONT_HERSHEY_PLAIN, 3, text_color, 3)
             cv2.circle(output, (150, 490), 10, circle_color, cv2.FILLED)
@@ -109,7 +82,7 @@ def update_finger_status(lmlist):
             cv2.circle(output, (150, 490), 10, (0, 0, 255), cv2.FILLED)
 
         # condition for ring finger
-        if RFT and RFM and RFT[1] < RFM[1] and RFD[1] < RFP[1]:
+        if self.RFT and self.RFM and self.RFT[1] < self.RFM[1] and self.RFD[1] < self.RFP[1]:
             finger_status['ring'] = True
             cv2.putText(output, "R", (190, 470), cv2.FONT_HERSHEY_PLAIN, 3, text_color, 3)
             cv2.circle(output, (200, 490), 10, circle_color, cv2.FILLED)
@@ -119,7 +92,7 @@ def update_finger_status(lmlist):
             cv2.circle(output, (200, 490), 10, (0, 0, 255), cv2.FILLED)
 
         # condition for pinky finger
-        if PFT and PFM and PFT[1] < PFM[1] and PFD[1] < PFP[1]:
+        if self.PFT and self.PFM and self.PFT[1] < self.PFM[1] and self.PFD[1] < self.PFP[1]:
             finger_status['pinky'] = True
             cv2.putText(output, "P", (245, 470), cv2.FONT_HERSHEY_PLAIN, 3, text_color, 3)
             cv2.circle(output, (250, 490), 10, circle_color, cv2.FILLED)
@@ -129,7 +102,7 @@ def update_finger_status(lmlist):
             cv2.circle(output, (250, 490), 10, (0, 0, 255), cv2.FILLED)
 
         # condition for thumb
-        if TFT[1] >= IFM[1] and TFT[0] > IFM[0]:
+        if self.TFT[1] >= self.IFM[1] and self.TFT[0] > self.IFM[0]:
             finger_status['thumb'] = False
             cv2.putText(output, "T", (35, 470), cv2.FONT_HERSHEY_PLAIN, 3, text_color, 3)
             cv2.circle(output, (50, 490), 10, (0, 0, 255), cv2.FILLED)
@@ -138,8 +111,35 @@ def update_finger_status(lmlist):
             cv2.putText(output, "T", (35, 470), cv2.FONT_HERSHEY_PLAIN, 3, text_color, 3)
             cv2.circle(output, (50, 490), 10, circle_color, cv2.FILLED)
 
-        detect = find_gesture(finger_status, lmlist)
+        detect = self.find_gesture(finger_status)
         return detect
+
+    def find_gesture(self, val):
+        for key, value in gestures.items():
+            if val == value:
+                self.highlight_finger(val)
+                cv2.putText(output, f"Gesture: {key}", (400, 70), cv2.FONT_HERSHEY_PLAIN, 3, circle_color, 3)
+                if key == "Volume":
+                    set_volume(self.lmlist)
+                return val
+
+    def highlight_finger(self, status):
+        if status['index']:
+            self.IFT, self.IFM = position(self.lmlist, 8, True), position(self.lmlist, 5, True)
+            self.IFD, self.IFP = position(self.lmlist, 7, True), position(self.lmlist, 6, True)
+        if status['middle']:
+            self.MFM, self.MFT = position(self.lmlist, 9, True), position(self.lmlist, 12, True)
+            self.MFP, self.MFD = position(self.lmlist, 10, True), position(self.lmlist, 11, True)
+        if status['ring']:
+            self.RFM, self.RFT = position(self.lmlist, 13, True), position(self.lmlist, 16, True)
+            self.RFP, self.RFD = position(self.lmlist, 14, True), position(self.lmlist, 15, True)
+        if status['pinky']:
+            self.PFT, self.PFM = position(self.lmlist, 20, True), position(self.lmlist, 17, True)
+            self.PFD, self.PFP = position(self.lmlist, 19, True), position(self.lmlist, 18, True)
+        if status['thumb']:
+            self.TFT, self.TFC = position(self.lmlist, 4, True), position(self.lmlist, 1, True)
+            self.TFM, self.TFI = position(self.lmlist, 2, True), position(self.lmlist, 3, True)
+            self.WRIST = position(self.lmlist, 0, True)
 
 
 def position(l, point, mark=False):
@@ -150,23 +150,26 @@ def position(l, point, mark=False):
         return x, y
 
 
-def highlight_finger(status):
-    if status['index']:
-        IFT, IFM = position(lmlist, 8, True), position(lmlist, 5, True)
-        IFD, IFP = position(lmlist, 7, True), position(lmlist, 6, True)
-    if status['middle']:
-        MFM, MFT = position(lmlist, 9, True), position(lmlist, 12, True)
-        MFP, MFD = position(lmlist, 10, True), position(lmlist, 11, True)
-    if status['ring']:
-        RFM, RFT = position(lmlist, 13, True), position(lmlist, 16, True)
-        RFP, RFD = position(lmlist, 14, True), position(lmlist, 15, True)
-    if status['pinky']:
-        PFT, PFM = position(lmlist, 20, True), position(lmlist, 17, True)
-        PFD, PFP = position(lmlist, 19, True), position(lmlist, 18, True)
-    if status['thumb']:
-        TFT, TFC = position(lmlist, 4, True), position(lmlist, 1, True)
-        TFM, TFI = position(lmlist, 2, True), position(lmlist, 3, True)
-        WRIST = position(lmlist, 0, True)
+def set_volume(lmlist):
+    devices = AudioUtilities.GetSpeakers()
+    interface = devices.Activate(
+        IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+    volume = cast(interface, POINTER(IAudioEndpointVolume))
+    IFT, TFT = position(lmlist, 8), position(lmlist, 4)
+    cv2.line(output, IFT, TFT, (255, 225, 255), 3)
+    distance = math.hypot(TFT[0] - IFT[0], TFT[1] - IFT[1])
+    cx, cy = (TFT[0] + IFT[0]) // 2, (TFT[1] + IFT[1]) // 2
+    if distance > 30:
+        cv2.circle(output, (cx, cy), 10, (255, 255, 0), cv2.FILLED)
+    else:
+        cv2.circle(output, (cx, cy), 10, (0, 255, 0), cv2.FILLED)
+    vol = np.interp(distance, [20, 300], [-65, 0])
+    volBar = np.interp(distance, [20, 300], [500, 100])
+    volume.SetMasterVolumeLevel(vol, None)
+    cv2.rectangle(output, (860, 100), (920, 500), (0, 0, 0), 3)
+    cv2.rectangle(output, (860, int(volBar)), (920, 500), (255, 255, 255), cv2.FILLED)
+    p = (500 - int(volBar)) / 400 * 100
+    cv2.putText(output, f"Volume: {int(p)}%", (10, 140), cv2.FONT_HERSHEY_PLAIN, 3, (0, 0, 0), 3)
 
 
 while True:
@@ -185,7 +188,7 @@ while True:
                 lmlist.append([id, cx, cy])
 
                 # detecting different gestures
-                a = update_finger_status(lmlist)
+                a = process_data(lmlist)
 
             mpDraw.draw_landmarks(output, handLms, mpHands.HAND_CONNECTIONS)
 
